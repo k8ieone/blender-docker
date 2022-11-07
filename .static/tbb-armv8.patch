@@ -1,0 +1,34 @@
+diff --git a/build_files/build_environment/patches/tbb.diff b/build_files/build_environment/patches/tbb.diff
+index c05c35b..00efd37 100644
+--- a/build_files/build_environment/patches/tbb.diff
++++ b/build_files/build_environment/patches/tbb.diff
+@@ -1,5 +1,21 @@
++diff --git a/build/linux.gcc.inc b/build/linux.gcc.inc
++index d820c15..b92681e 100644
++--- a/build/linux.gcc.inc
+++++ b/build/linux.gcc.inc
++@@ -121,6 +121,11 @@ ifeq (armv7,$(arch))
++     CPLUS_FLAGS    += -Wa,-mimplicit-it=thumb
++ endif
++ 
+++ifeq (aarch64,$(arch))
+++    CPLUS_FLAGS    += -march=armv8-a
+++endif
+++
+++
++ #------------------------------------------------------------------------------
++ # Setting assembler data.
++ #------------------------------------------------------------------------------
+ diff --git a/include/tbb/tbb_config.h b/include/tbb/tbb_config.h
+-index 7a8d06a0..886699d8 100644
++index 7a8d06a..886699d 100644
+ --- a/include/tbb/tbb_config.h
+ +++ b/include/tbb/tbb_config.h
+ @@ -620,7 +620,7 @@ There are four cases that are supported:
+@@ -10,4 +26,4 @@ index 7a8d06a0..886699d8 100644
+ +    #if (__cplusplus >= 201402L && (!defined(_MSC_VER) || _MSC_VER >= 1920))
+          #define __TBB_DEPRECATED [[deprecated]]
+          #define __TBB_DEPRECATED_MSG(msg) [[deprecated(msg)]]
+-     #elif _MSC_VER
+\ No newline at end of file
++     #elif _MSC_VER

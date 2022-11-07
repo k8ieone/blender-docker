@@ -1,0 +1,510 @@
+diff --git a/build_files/build_environment/cmake/blosc.cmake b/build_files/build_environment/cmake/blosc.cmake
+index 89df67b..ce88f08 100644
+--- a/build_files/build_environment/cmake/blosc.cmake
++++ b/build_files/build_environment/cmake/blosc.cmake
+@@ -29,7 +29,7 @@ set(BLOSC_EXTRA_ARGS
+   -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+ )
+ 
+-# Prevent blosc from including it's own local copy of zlib in the object file
++# Prevent blosc from including its own local copy of zlib in the object file
+ # and cause linker errors with everybody else.
+ set(BLOSC_EXTRA_ARGS ${BLOSC_EXTRA_ARGS}
+   -DPREFER_EXTERNAL_ZLIB=ON
+diff --git a/build_files/build_environment/cmake/boost.cmake b/build_files/build_environment/cmake/boost.cmake
+index 8b36af7..5170a3a 100644
+--- a/build_files/build_environment/cmake/boost.cmake
++++ b/build_files/build_environment/cmake/boost.cmake
+@@ -18,6 +18,12 @@
+ 
+ set(BOOST_ADDRESS_MODEL 64)
+ 
++if(BLENDER_PLATFORM_ARM)
++  set(BOOST_ARCHITECTURE arm)
++else()
++  set(BOOST_ARCHITECTURE x86)
++endif()
++
+ if(WIN32)
+   set(BOOST_TOOLSET toolset=msvc-14.1)
+   set(BOOST_COMPILER_STRING -vc141)
+@@ -29,7 +35,6 @@ if(WIN32)
+   if(BUILD_MODE STREQUAL Release)
+     set(BOOST_HARVEST_CMD ${BOOST_HARVEST_CMD} && ${CMAKE_COMMAND} -E copy_directory ${LIBDIR}/boost/include/boost-${BOOST_VERSION_NODOTS_SHORT}/ ${HARVEST_TARGET}/boost/include/)
+   endif()
+-
+ elseif(APPLE)
+   set(BOOST_CONFIGURE_COMMAND ./bootstrap.sh)
+   set(BOOST_BUILD_COMMAND ./b2)
+@@ -93,7 +98,7 @@ ExternalProject_Add(external_boost
+   UPDATE_COMMAND  ""
+   PATCH_COMMAND ${BOOST_PATCH_COMMAND}
+   CONFIGURE_COMMAND ${BOOST_CONFIGURE_COMMAND}
+-  BUILD_COMMAND ${BOOST_BUILD_COMMAND} ${BOOST_BUILD_OPTIONS} -j${MAKE_THREADS} architecture=x86 address-model=${BOOST_ADDRESS_MODEL} link=static threading=multi ${BOOST_OPTIONS}    --prefix=${LIBDIR}/boost install
++  BUILD_COMMAND ${BOOST_BUILD_COMMAND} ${BOOST_BUILD_OPTIONS} -j${MAKE_THREADS} architecture=${BOOST_ARCHITECTURE} address-model=${BOOST_ADDRESS_MODEL} link=static threading=multi ${BOOST_OPTIONS}    --prefix=${LIBDIR}/boost install
+   BUILD_IN_SOURCE 1
+   INSTALL_COMMAND "${BOOST_HARVEST_CMD}"
+ )
+diff --git a/build_files/build_environment/cmake/download.cmake b/build_files/build_environment/cmake/download.cmake
+index 27351dd..b4d96ea 100644
+--- a/build_files/build_environment/cmake/download.cmake
++++ b/build_files/build_environment/cmake/download.cmake
+@@ -87,7 +87,9 @@ download_source(LIBGLU)
+ download_source(MESA)
+ download_source(NASM)
+ download_source(XR_OPENXR_SDK)
++download_source(WL_PROTOCOLS)
+ download_source(ISPC)
+ download_source(GMP)
+ download_source(POTRACE)
+ download_source(HARU)
++download_source(ZSTD)
+diff --git a/build_files/build_environment/cmake/embree.cmake b/build_files/build_environment/cmake/embree.cmake
+index 4830630..b1d5dff 100644
+--- a/build_files/build_environment/cmake/embree.cmake
++++ b/build_files/build_environment/cmake/embree.cmake
+@@ -43,11 +43,17 @@ endif()
+ 
+ if(WIN32)
+   set(EMBREE_BUILD_DIR ${BUILD_MODE}/)
++  if(BUILD_MODE STREQUAL Debug)
++    list(APPEND EMBREE_EXTRA_ARGS
++     -DEMBREE_TBBMALLOC_LIBRARY_NAME=tbbmalloc_debug
++     -DEMBREE_TBB_LIBRARY_NAME=tbb_debug
++    )
++  endif()
+ else()
+   set(EMBREE_BUILD_DIR)
+ endif()
+ 
+-if(APPLE AND ("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64"))
++if(BLENDER_PLATFORM_ARM)
+   ExternalProject_Add(external_embree
+     GIT_REPOSITORY ${EMBREE_ARM_GIT}
+     GIT_TAG "blender-arm"
+diff --git a/build_files/build_environment/cmake/gmp.cmake b/build_files/build_environment/cmake/gmp.cmake
+index 323630a..6ca8167 100644
+--- a/build_files/build_environment/cmake/gmp.cmake
++++ b/build_files/build_environment/cmake/gmp.cmake
+@@ -25,19 +25,12 @@ else()
+   set(GMP_OPTIONS --enable-static --disable-shared )
+ endif()
+ 
+-if(APPLE)
+-  if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
+-    set(GMP_OPTIONS
+-      ${GMP_OPTIONS}
+-      --disable-assembly
+-    )
+-  else()
+-    set(GMP_OPTIONS
+-      ${GMP_OPTIONS}
+-      --with-pic
+-    )
+-  endif()
+-elseif(UNIX)
++if(APPLE AND NOT BLENDER_PLATFORM_ARM)
++  set(GMP_OPTIONS
++    ${GMP_OPTIONS}
++    --with-pic
++  )
++elseif(UNIX AND NOT APPLE)
+   set(GMP_OPTIONS
+     ${GMP_OPTIONS}
+     --with-pic
+@@ -45,6 +38,13 @@ elseif(UNIX)
+   )
+ endif()
+ 
++if(BLENDER_PLATFORM_ARM)
++  set(GMP_OPTIONS
++    ${GMP_OPTIONS}
++    --disable-assembly
++  )
++endif()
++
+ ExternalProject_Add(external_gmp
+   URL file://${PACKAGE_DIR}/${GMP_FILE}
+   DOWNLOAD_DIR ${DOWNLOAD_DIR}
+diff --git a/build_files/build_environment/cmake/harvest.cmake b/build_files/build_environment/cmake/harvest.cmake
+index 23d0dcb..a19c332 100644
+--- a/build_files/build_environment/cmake/harvest.cmake
++++ b/build_files/build_environment/cmake/harvest.cmake
+@@ -109,9 +109,9 @@ harvest(llvm/lib llvm/lib "libclang*.a")
+ if(APPLE)
+   harvest(openmp/lib openmp/lib "*")
+   harvest(openmp/include openmp/include "*.h")
+-  if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
+-    harvest(sse2neon sse2neon "*.h")
+-  endif()
++endif()
++if(BLENDER_PLATFORM_ARM)
++  harvest(sse2neon sse2neon "*.h")
+ endif()
+ harvest(ogg/lib ffmpeg/lib "*.a")
+ harvest(openal/include openal/include "*.h")
+@@ -126,6 +126,8 @@ if(UNIX AND NOT APPLE)
+ 
+   harvest(xml2/include xml2/include "*.h")
+   harvest(xml2/lib xml2/lib "*.a")
++
++  harvest(wayland-protocols/share/wayland-protocols wayland-protocols/share/wayland-protocols/ "*.xml")
+ else()
+   harvest(blosc/lib openvdb/lib "*.a")
+   harvest(xml2/lib opencollada/lib "*.a")
+@@ -190,6 +192,8 @@ harvest(potrace/include potrace/include "*.h")
+ harvest(potrace/lib potrace/lib "*.a")
+ harvest(haru/include haru/include "*.h")
+ harvest(haru/lib haru/lib "*.a")
++harvest(zstd/include zstd/include "*.h")
++harvest(zstd/lib zstd/lib "*.a")
+ 
+ if(UNIX AND NOT APPLE)
+   harvest(libglu/lib mesa/lib "*.so*")
+diff --git a/build_files/build_environment/cmake/llvm.cmake b/build_files/build_environment/cmake/llvm.cmake
+index f067267..cbb9864 100644
+--- a/build_files/build_environment/cmake/llvm.cmake
++++ b/build_files/build_environment/cmake/llvm.cmake
+@@ -16,7 +16,7 @@
+ #
+ # ***** END GPL LICENSE BLOCK *****
+ 
+-if(APPLE AND "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
++if(BLENDER_PLATFORM_ARM)
+   set(LLVM_TARGETS AArch64$<SEMICOLON>ARM)
+ else()
+   set(LLVM_TARGETS X86)
+diff --git a/build_files/build_environment/cmake/opencolorio.cmake b/build_files/build_environment/cmake/opencolorio.cmake
+index bd03be5..28c9397 100644
+--- a/build_files/build_environment/cmake/opencolorio.cmake
++++ b/build_files/build_environment/cmake/opencolorio.cmake
+@@ -36,7 +36,7 @@ set(OPENCOLORIO_EXTRA_ARGS
+   -Dyaml-cpp_ROOT=${LIBDIR}/yamlcpp
+ )
+ 
+-if(APPLE AND NOT("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64"))
++if(BLENDER_PLATFORM_ARM)
+   set(OPENCOLORIO_EXTRA_ARGS
+     ${OPENCOLORIO_EXTRA_ARGS}
+     -DOCIO_USE_SSE=OFF
+diff --git a/build_files/build_environment/cmake/options.cmake b/build_files/build_environment/cmake/options.cmake
+index 486b3d1..8930bd7 100644
+--- a/build_files/build_environment/cmake/options.cmake
++++ b/build_files/build_environment/cmake/options.cmake
+@@ -137,6 +137,10 @@ else()
+     endif()
+     set(OSX_SYSROOT ${XCODE_DEV_PATH}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk)
+ 
++    if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
++      set(BLENDER_PLATFORM_ARM ON)
++    endif()
++
+     set(PLATFORM_CFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
+     set(PLATFORM_CXXFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -std=c++11 -stdlib=libc++ -arch ${CMAKE_OSX_ARCHITECTURES}")
+     set(PLATFORM_LDFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
+@@ -151,6 +155,10 @@ else()
+       -DCMAKE_OSX_SYSROOT:PATH=${OSX_SYSROOT}
+     )
+   else()
++    if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
++      set(BLENDER_PLATFORM_ARM ON)
++    endif()
++
+     set(PLATFORM_CFLAGS "-fPIC")
+     set(PLATFORM_CXXFLAGS "-std=c++11 -fPIC")
+     set(PLATFORM_LDFLAGS)
+diff --git a/build_files/build_environment/cmake/png.cmake b/build_files/build_environment/cmake/png.cmake
+index d9248b6..458d3a1 100644
+--- a/build_files/build_environment/cmake/png.cmake
++++ b/build_files/build_environment/cmake/png.cmake
+@@ -22,8 +22,8 @@ set(PNG_EXTRA_ARGS
+   -DPNG_STATIC=ON
+ )
+ 
+-if(APPLE AND ("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64"))
+-  set(PNG_EXTRA_ARGS ${PNG_EXTRA_ARGS} -DPNG_HARDWARE_OPTIMIZATIONS=ON -DPNG_ARM_NEON=on -DCMAKE_SYSTEM_PROCESSOR="aarch64")
++if(BLENDER_PLATFORM_ARM)
++  set(PNG_EXTRA_ARGS ${PNG_EXTRA_ARGS} -DPNG_HARDWARE_OPTIMIZATIONS=ON -DPNG_ARM_NEON=ON -DCMAKE_SYSTEM_PROCESSOR="aarch64")
+ endif()
+ 
+ ExternalProject_Add(external_png
+diff --git a/build_files/build_environment/cmake/sse2neon.cmake b/build_files/build_environment/cmake/sse2neon.cmake
+index dca2d94..d7987fd 100644
+--- a/build_files/build_environment/cmake/sse2neon.cmake
++++ b/build_files/build_environment/cmake/sse2neon.cmake
+@@ -16,15 +16,13 @@
+ #
+ # ***** END GPL LICENSE BLOCK *****
+ 
+-if(APPLE AND ("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64"))
+-  ExternalProject_Add(external_sse2neon
+-    GIT_REPOSITORY  ${SSE2NEON_GIT}
+-    GIT_TAG ${SSE2NEON_GIT_HASH}
+-    DOWNLOAD_DIR ${DOWNLOAD_DIR}
+-    PREFIX ${BUILD_DIR}/sse2neon
+-    CONFIGURE_COMMAND echo sse2neon - Nothing to configure
+-    BUILD_COMMAND echo sse2neon - nothing to build
+-    INSTALL_COMMAND mkdir -p ${LIBDIR}/sse2neon && cp ${BUILD_DIR}/sse2neon/src/external_sse2neon/sse2neon.h ${LIBDIR}/sse2neon
+-    INSTALL_DIR ${LIBDIR}/sse2neon
+-  )
+-endif()
++ExternalProject_Add(external_sse2neon
++  GIT_REPOSITORY  ${SSE2NEON_GIT}
++  GIT_TAG ${SSE2NEON_GIT_HASH}
++  DOWNLOAD_DIR ${DOWNLOAD_DIR}
++  PREFIX ${BUILD_DIR}/sse2neon
++  CONFIGURE_COMMAND echo sse2neon - Nothing to configure
++  BUILD_COMMAND echo sse2neon - nothing to build
++  INSTALL_COMMAND mkdir -p ${LIBDIR}/sse2neon && cp ${BUILD_DIR}/sse2neon/src/external_sse2neon/sse2neon.h ${LIBDIR}/sse2neon
++  INSTALL_DIR ${LIBDIR}/sse2neon
++)
+diff --git a/build_files/build_environment/cmake/ssl.cmake b/build_files/build_environment/cmake/ssl.cmake
+index 4426cc8..615b881 100644
+--- a/build_files/build_environment/cmake/ssl.cmake
++++ b/build_files/build_environment/cmake/ssl.cmake
+@@ -22,7 +22,9 @@ set(SSL_PATCH_CMD echo .)
+ if(APPLE)
+   set(SSL_OS_COMPILER "blender-darwin-${CMAKE_OSX_ARCHITECTURES}")
+ else()
+-  if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
++  if(BLENDER_PLATFORM_ARM)
++    set(SSL_OS_COMPILER "blender-linux-aarch64")
++  elseif("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+     set(SSL_EXTRA_ARGS enable-ec_nistp_64_gcc_128)
+     set(SSL_OS_COMPILER "blender-linux-x86_64")
+   else()
+diff --git a/build_files/build_environment/cmake/ssl.conf b/build_files/build_environment/cmake/ssl.conf
+index 8a9c9dc..fa59bcf 100644
+--- a/build_files/build_environment/cmake/ssl.conf
++++ b/build_files/build_environment/cmake/ssl.conf
+@@ -8,6 +8,11 @@ my %targets = (
+     inherit_from     => [ "linux-x86_64" ],
+     cflags => add("-fPIC"),
+   },
++  "blender-linux-aarch64" => {
++    inherit_from     => [ "linux-aarch64" ],
++    cxxflags => add("-fPIC"),
++    cflags => add("-fPIC"),
++  },
+   "blender-darwin-x86_64" => {
+     inherit_from     => [ "darwin64-x86_64-cc" ],
+     cflags => add("-fPIC"),
+diff --git a/build_files/build_environment/cmake/tbb.cmake b/build_files/build_environment/cmake/tbb.cmake
+index b006898..d1129ed 100644
+--- a/build_files/build_environment/cmake/tbb.cmake
++++ b/build_files/build_environment/cmake/tbb.cmake
+@@ -21,6 +21,8 @@ if(WIN32)
+     -DTBB_BUILD_TBBMALLOC=On
+     -DTBB_BUILD_TBBMALLOC_PROXY=On
+     -DTBB_BUILD_STATIC=Off
++    -DTBB_BUILD_TESTS=Off
++    -DCMAKE_DEBUG_POSTFIX=_debug
+   )
+   set(TBB_LIBRARY tbb)
+   set(TBB_STATIC_LIBRARY Off)
+@@ -30,6 +32,7 @@ else()
+     -DTBB_BUILD_TBBMALLOC=On
+     -DTBB_BUILD_TBBMALLOC_PROXY=Off
+     -DTBB_BUILD_STATIC=On
++    -DTBB_BUILD_TESTS=Off
+   )
+   set(TBB_LIBRARY tbb_static)
+   set(TBB_STATIC_LIBRARY On)
+@@ -53,17 +56,17 @@ if(WIN32)
+     ExternalProject_Add_Step(external_tbb after_install
+       # findtbb.cmake in some deps *NEEDS* to find tbb_debug.lib even if they are not going to use it
+       # to make that test pass, we place a copy with the right name in the lib folder.
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbb.lib ${HARVEST_TARGET}/tbb/lib/tbb_debug.lib
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc.lib ${HARVEST_TARGET}/tbb/lib/tbbmalloc_debug.lib
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbb.dll ${HARVEST_TARGET}/tbb/lib/tbb_debug.dll
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc.dll ${HARVEST_TARGET}/tbb/lib/tbbmalloc_debug.dll
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbb.lib ${LIBDIR}/tbb/lib/tbb_debug.lib
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc.lib ${LIBDIR}/tbb/lib/tbbmalloc_debug.lib
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/bin/tbb.dll ${LIBDIR}/tbb/bin/tbb_debug.dll
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/bin/tbbmalloc.dll ${LIBDIR}/tbb/bin/tbbmalloc_debug.dll
+       # Normal collection of build artifacts
+       COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbb.lib ${HARVEST_TARGET}/tbb/lib/tbb.lib
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbb.dll ${HARVEST_TARGET}/tbb/lib/tbb.dll
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/bin/tbb.dll ${HARVEST_TARGET}/tbb/bin/tbb.dll
+       COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc.lib ${HARVEST_TARGET}/tbb/lib/tbbmalloc.lib
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc.dll ${HARVEST_TARGET}/tbb/lib/tbbmalloc.dll
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/bin/tbbmalloc.dll ${HARVEST_TARGET}/tbb/bin/tbbmalloc.dll
+       COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc_proxy.lib ${HARVEST_TARGET}/tbb/lib/tbbmalloc_proxy.lib
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc_proxy.dll ${HARVEST_TARGET}/tbb/lib/tbbmalloc_proxy.dll
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/bin/tbbmalloc_proxy.dll ${HARVEST_TARGET}/tbb/bin/tbbmalloc_proxy.dll
+       COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBDIR}/tbb/include/ ${HARVEST_TARGET}/tbb/include/
+       DEPENDEES install
+     )
+@@ -74,11 +77,12 @@ if(WIN32)
+       # to make that test pass, we place a copy with the right name in the lib folder.
+       COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbb_debug.lib ${LIBDIR}/tbb/lib/tbb.lib
+       # Normal collection of build artifacts
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbb_debug.lib ${HARVEST_TARGET}/tbb/lib/debug/tbb_debug.lib
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbb_debug.dll ${HARVEST_TARGET}/tbb/lib/debug/tbb_debug.dll
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc_proxy.lib ${HARVEST_TARGET}/tbb/lib/tbbmalloc_proxy_debug.lib
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc.dll ${HARVEST_TARGET}/tbb/lib/debug/tbbmalloc.dll
+-      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc_proxy.dll ${HARVEST_TARGET}/tbb/lib/debug/tbbmalloc_proxy.dll
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbb_debug.lib ${HARVEST_TARGET}/tbb/lib/tbb_debug.lib
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/bin/tbb_debug.dll ${HARVEST_TARGET}/tbb/bin/tbb_debug.dll
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc_debug.lib ${HARVEST_TARGET}/tbb/lib/tbbmalloc_debug.lib
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/lib/tbbmalloc_proxy_debug.lib ${HARVEST_TARGET}/tbb/lib/tbbmalloc_proxy_debug.lib
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/bin/tbbmalloc_debug.dll ${HARVEST_TARGET}/tbb/bin/tbbmalloc_debug.dll
++      COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/tbb/bin/tbbmalloc_proxy_debug.dll ${HARVEST_TARGET}/tbb/bin/tbbmalloc_proxy_debug.dll
+       DEPENDEES install
+     )
+   endif()
+diff --git a/build_files/build_environment/cmake/versions.cmake b/build_files/build_environment/cmake/versions.cmake
+index 97da5d5..a71fc4b 100644
+--- a/build_files/build_environment/cmake/versions.cmake
++++ b/build_files/build_environment/cmake/versions.cmake
+@@ -43,7 +43,7 @@ set(JPEG_FILE libjpeg-turbo-${JPEG_VERSION}.tar.gz)
+ set(BOOST_VERSION 1.73.0)
+ set(BOOST_VERSION_NODOTS 1_73_0)
+ set(BOOST_VERSION_NODOTS_SHORT 1_73)
+-set(BOOST_URI https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_NODOTS}.tar.gz)
++set(BOOST_URI https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_NODOTS}.tar.gz)
+ set(BOOST_HASH 4036cd27ef7548b8d29c30ea10956196)
+ set(BOOST_HASH_TYPE MD5)
+ set(BOOST_FILE boost_${BOOST_VERSION_NODOTS}.tar.gz)
+@@ -152,7 +152,7 @@ set(OPENCOLORIO_HASH 1a2e3478b6cd9a1549f24e1b2205e3f0)
+ set(OPENCOLORIO_HASH_TYPE MD5)
+ set(OPENCOLORIO_FILE OpenColorIO-${OPENCOLORIO_VERSION}.tar.gz)
+ 
+-if(APPLE AND ("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64"))
++if(BLENDER_PLATFORM_ARM)
+   # Newer version required by ISPC with arm support.
+   set(LLVM_VERSION 11.0.1)
+   set(LLVM_URI https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/llvm-project-${LLVM_VERSION}.src.tar.xz)
+@@ -216,9 +216,9 @@ set(OPENVDB_HASH 01b490be16cc0e15c690f9a153c21461)
+ set(OPENVDB_HASH_TYPE MD5)
+ set(OPENVDB_FILE openvdb-${OPENVDB_VERSION}.tar.gz)
+ 
+-set(NANOVDB_GIT_UID e62f7a0bf1e27397223c61ddeaaf57edf111b77f)
++set(NANOVDB_GIT_UID dc37d8a631922e7bef46712947dc19b755f3e841)
+ set(NANOVDB_URI https://github.com/AcademySoftwareFoundation/openvdb/archive/${NANOVDB_GIT_UID}.tar.gz)
+-set(NANOVDB_HASH 90919510bc6ccd630fedc56f748cb199)
++set(NANOVDB_HASH e7b9e863ec2f3b04ead171dec2322807)
+ set(NANOVDB_HASH_TYPE MD5)
+ set(NANOVDB_FILE nano-vdb-${NANOVDB_GIT_UID}.tar.gz)
+ 
+@@ -297,10 +297,10 @@ set(OPENJPEG_HASH 63f5a4713ecafc86de51bfad89cc07bb788e9bba24ebbf0c4ca637621aadb6
+ set(OPENJPEG_HASH_TYPE SHA256)
+ set(OPENJPEG_FILE openjpeg-v${OPENJPEG_VERSION}.tar.gz)
+ 
+-set(FFMPEG_VERSION 4.2.3)
++set(FFMPEG_VERSION 4.4)
+ set(FFMPEG_URI http://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2)
+-set(FFMPEG_HASH 695fad11f3baf27784e24cb0e977b65a)
+-set(FFMPEG_HASH_TYPE MD5)
++set(FFMPEG_HASH 42093549751b582cf0f338a21a3664f52e0a9fbe0d238d3c992005e493607d0e)
++set(FFMPEG_HASH_TYPE SHA256)
+ set(FFMPEG_FILE ffmpeg-${FFMPEG_VERSION}.tar.bz2)
+ 
+ set(FFTW_VERSION 3.3.8)
+@@ -398,11 +398,20 @@ set(LZMA_HASH 5117f930900b341493827d63aa910ff5e011e0b994197c3b71c08a20228a42df)
+ set(LZMA_HASH_TYPE SHA256)
+ set(LZMA_FILE xz-${LZMA_VERSION}.tar.bz2)
+ 
+-set(SSL_VERSION 1.1.1g)
+-set(SSL_URI https://www.openssl.org/source/openssl-${SSL_VERSION}.tar.gz)
+-set(SSL_HASH ddb04774f1e32f0c49751e21b67216ac87852ceb056b75209af2443400636d46)
+-set(SSL_HASH_TYPE SHA256)
+-set(SSL_FILE openssl-${SSL_VERSION}.tar.gz)
++if(BLENDER_PLATFORM_ARM)
++  # Need at least 1.1.1i for aarch64 support (https://github.com/openssl/openssl/pull/13218)
++  set(SSL_VERSION 1.1.1i)
++  set(SSL_URI https://www.openssl.org/source/openssl-${SSL_VERSION}.tar.gz)
++  set(SSL_HASH e8be6a35fe41d10603c3cc635e93289ed00bf34b79671a3a4de64fcee00d5242)
++  set(SSL_HASH_TYPE SHA256)
++  set(SSL_FILE openssl-${SSL_VERSION}.tar.gz)
++else()
++  set(SSL_VERSION 1.1.1g)
++  set(SSL_URI https://www.openssl.org/source/openssl-${SSL_VERSION}.tar.gz)
++  set(SSL_HASH ddb04774f1e32f0c49751e21b67216ac87852ceb056b75209af2443400636d46)
++  set(SSL_HASH_TYPE SHA256)
++  set(SSL_FILE openssl-${SSL_VERSION}.tar.gz)
++endif()
+ 
+ set(SQLITE_VERSION 3.31.1)
+ set(SQLITE_URI https://www.sqlite.org/2018/sqlite-src-3240000.zip)
+@@ -423,9 +432,9 @@ set(USD_HASH 1dd1e2092d085ed393c1f7c450a4155a)
+ set(USD_HASH_TYPE MD5)
+ set(USD_FILE usd-v${USD_VERSION}.tar.gz)
+ 
+-set(OIDN_VERSION 1.3.0)
++set(OIDN_VERSION 1.4.0)
+ set(OIDN_URI https://github.com/OpenImageDenoise/oidn/releases/download/v${OIDN_VERSION}/oidn-${OIDN_VERSION}.src.tar.gz)
+-set(OIDN_HASH 301a5a0958d375a942014df0679b9270)
++set(OIDN_HASH 421824019becc5b664a22a2b98332bc5)
+ set(OIDN_HASH_TYPE MD5)
+ set(OIDN_FILE oidn-${OIDN_VERSION}.src.tar.gz)
+ 
+@@ -447,13 +456,19 @@ set(NASM_HASH aded8b796c996a486a56e0515c83e414116decc3b184d88043480b32eb0a8589)
+ set(NASM_HASH_TYPE SHA256)
+ set(NASM_FILE nasm-${NASM_VERSION}.tar.gz)
+ 
+-set(XR_OPENXR_SDK_VERSION 1.0.14)
++set(XR_OPENXR_SDK_VERSION 1.0.17)
+ set(XR_OPENXR_SDK_URI https://github.com/KhronosGroup/OpenXR-SDK/archive/release-${XR_OPENXR_SDK_VERSION}.tar.gz)
+-set(XR_OPENXR_SDK_HASH 0df6b2fd6045423451a77ff6bc3e1a75)
++set(XR_OPENXR_SDK_HASH bf0fd8828837edff01047474e90013e1)
+ set(XR_OPENXR_SDK_HASH_TYPE MD5)
+ set(XR_OPENXR_SDK_FILE OpenXR-SDK-${XR_OPENXR_SDK_VERSION}.tar.gz)
+ 
+-if(APPLE AND ("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64"))
++set(WL_PROTOCOLS_VERSION 1.21)
++set(WL_PROTOCOLS_FILE wayland-protocols-${WL_PROTOCOLS_VERSION}.tar.gz)
++set(WL_PROTOCOLS_URI https://gitlab.freedesktop.org/wayland/wayland-protocols/-/archive/${WL_PROTOCOLS_VERSION}/${WL_PROTOCOLS_FILE})
++set(WL_PROTOCOLS_HASH af5ca07e13517cdbab33504492cef54a)
++set(WL_PROTOCOLS_HASH_TYPE MD5)
++
++if(BLENDER_PLATFORM_ARM)
+   # Unreleased version with macOS arm support.
+   set(ISPC_URI https://github.com/ispc/ispc/archive/f5949c055eb9eeb93696978a3da4bfb3a6a30b35.zip)
+   set(ISPC_HASH d382fea18d01dbd0cd05d9e1ede36d7d)
+@@ -485,5 +500,11 @@ set(HARU_HASH 4f916aa49c3069b3a10850013c507460)
+ set(HARU_HASH_TYPE MD5)
+ set(HARU_FILE libharu-${HARU_VERSION}.tar.gz)
+ 
++set(ZSTD_VERSION 1.5.0)
++set(ZSTD_URI https://github.com/facebook/zstd/releases/download/v${ZSTD_VERSION}/zstd-${ZSTD_VERSION}.tar.gz)
++set(ZSTD_HASH 5194fbfa781fcf45b98c5e849651aa7b3b0a008c6b72d4a0db760f3002291e94)
++set(ZSTD_HASH_TYPE SHA256)
++set(ZSTD_FILE zstd-${ZSTD_VERSION}.tar.gz)
++
+ set(SSE2NEON_GIT https://github.com/DLTcollab/sse2neon.git)
+ set(SSE2NEON_GIT_HASH fe5ff00bb8d19b327714a3c290f3e2ce81ba3525)
+diff --git a/build_files/build_environment/cmake/x264.cmake b/build_files/build_environment/cmake/x264.cmake
+index a32f119..08d698c 100644
+--- a/build_files/build_environment/cmake/x264.cmake
++++ b/build_files/build_environment/cmake/x264.cmake
+@@ -20,24 +20,16 @@ if(WIN32)
+   set(X264_EXTRA_ARGS --enable-win32thread --cross-prefix=${MINGW_HOST}- --host=${MINGW_HOST})
+ endif()
+ 
+-
+-if(APPLE)
+-  if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
+-    set(X264_EXTRA_ARGS ${X264_EXTRA_ARGS} "--disable-asm")
+-    set(X264_CONFIGURE_ENV echo .)
+-  else()
+-    set(X264_CONFIGURE_ENV
+-      export AS=${LIBDIR}/nasm/bin/nasm
+-    )
+-  endif()
+-else()
+-  set(X264_CONFIGURE_ENV echo .)
++if(BLENDER_PLATFORM_ARM)
++  set(X264_EXTRA_ARGS ${X264_EXTRA_ARGS} "--disable-asm")
+ endif()
+ 
+-if(UNIX AND NOT APPLE)
++if((APPLE AND NOT BLENDER_PLATFORM_ARM) OR (UNIX AND NOT APPLE))
+   set(X264_CONFIGURE_ENV
+     export AS=${LIBDIR}/nasm/bin/nasm
+   )
++else()
++  set(X264_CONFIGURE_ENV echo .)
+ endif()
+ 
+ ExternalProject_Add(external_x264
