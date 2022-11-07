@@ -11,6 +11,6 @@ Supported architectures are `linux/arm/v7`, `linux/aarch64` and `linux/amd64`.
 
 ## Versions
 | Blender version | Tag                              | GHCR Link                                                                                    | Notes           |
-| --------------- | ---------------                  | ---------------                                                                              | --------------- |
+| :-------------- | :-------------:                  | :-------------:                                                                              | --------------: |
 | 2.93.5          | `ghcr.io/k8ieone/blender:2.93.5` | [Here](https://github.com/k8ieone/blender-docker/pkgs/container/blender/13501502?tag=2.93.5) |                 |
 | 3.3.1           | `ghcr.io/k8ieone/blender:3.3.1`  | [Here](https://github.com/k8ieone/blender-docker/pkgs/container/blender/13501502?tag=3.3.1)  | Enabled Alembic |
