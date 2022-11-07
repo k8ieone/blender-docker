@@ -3,10 +3,9 @@
 #  - remove depend on openimagedenoise
 #  - Removed the unnecessary Optix source
 #  - Disabled CUDA and Optix Cycles device support
-#  - Disabled Alembic
 
 pkgname=blender
-pkgver=3.0.0
+pkgver=3.3.1
 pkgrel=1
 epoch=20
 pkgdesc="A fully integrated 3D graphics creation suite"
@@ -16,8 +15,8 @@ url="http://www.blender.org"
 depends=('libpng' 'libtiff' 'openexr' 'python' 'desktop-file-utils' 'python-requests'
          'shared-mime-info' 'hicolor-icon-theme' 'xdg-utils' 'openjpeg2' 'glew' 'python-numpy'
          'freetype2' 'openal' 'ffmpeg' 'fftw' 'boost-libs' 'opencollada' 'openxr'
-         'openimageio' 'libsndfile' 'jack' 'opencolorio' 'openshadinglanguage'
-         'jemalloc' 'libspnav' 'ptex' 'opensubdiv' 'openvdb' 'log4cplus' 'sdl2')
+         'openimageio' 'libsndfile' 'jack' 'opencolorio' 'openshadinglanguage' 'alembic'
+         'jemalloc' 'libspnav' 'ptex' 'opensubdiv' 'openvdb' 'log4cplus' 'sdl2' 'draco')
 makedepends=('cmake' 'boost' 'mesa' 'git' 'llvm' 'ninja' 'patch')
 options=(!strip)
 source=("git+https://git.blender.org/blender.git#tag=v$pkgver"
@@ -25,19 +24,15 @@ source=("git+https://git.blender.org/blender.git#tag=v$pkgver"
         "git+https://git.blender.org/blender-addons-contrib.git"
         "git+https://git.blender.org/blender-translations.git"
         "git+https://git.blender.org/blender-dev-tools.git"
-        "blender-openexr3.patch")
-md5sums=('SKIP'
-         'SKIP'
-         'SKIP'
-         'SKIP'
-         'SKIP'
-         'ea1a64b7bffcecaf687a4a8deae8e83b')
+        force-draco1.patch
+        force-draco2.patch)
 sha512sums=('SKIP'
             'SKIP'
             'SKIP'
             'SKIP'
             'SKIP'
-            'e2dd7210d26b70445e9ae8e33dea35111ad0b0aca9d3b4ded3df560d0fcc8dc044868f729e0f090a04b6f316f083b5505a7056ce088e8702065add87b9b457e5')
+            'e239da4f3906f1b54265435181cf770bae3d269c8d915df9a73861e6ee71ec70bf2339426e7c81a91e5a567273b3b3742d7a99feefd3398d821b26e1ff3a56d0'
+            '527ab66e5eace777de0043c1ca5787a488f6471450ce67fd6d08137ad0ef56177bc0c17696f30a5fca23fa55d8ca9c3f30cb7b17550dba2dbd8e89ca0b361990')
 
 prepare() {
   cd "$pkgname"
@@ -78,22 +73,29 @@ build() {
     -DWITH_CYCLES=ON \
     -DWITH_RAYOPTIMIZATION=ON \
     -DWITH_CYCLES_EMBREE=OFF \
-    -DWITH_ALEMBIC=OFF \
+    -DWITH_ALEMBIC=ON \
     -DWITH_CYCLES_DEVICE_CUDA=OFF \
     -DWITH_CYCLES_DEVICE_OPTIX=OFF \
 
-  ninja -C build
+  cmake --build build
 }
 
 package() {
   cd "$pkgname"
 
-  DESTDIR="${pkgdir}" ninja -C build install
+  DESTDIR="${pkgdir}" cmake --install build
   install -Dm755 release/bin/blender-softwaregl "${pkgdir}/usr/bin/blender-softwaregl"
   python -m compileall "${pkgdir}/usr/share/blender"
   python -O -m compileall "${pkgdir}/usr/share/blender"
 
+  install -Dm644 release/freedesktop/org.blender.Blender.appdata.xml "${pkgdir}/usr/share/metainfo/org.blender.Blender.appdata.xml"
+
   # Manually install additional scripts (See FS#69351)
   cp -r release/scripts/addons_contrib/* "${pkgdir}"/usr/share/blender/3*/scripts/addons_contrib/
+
+  # Manually install draco bindings (See FS#73415)
+  mkdir -p "${pkgdir}/usr/lib/python$(get_pyver)"/
+  mv "${pkgdir}"/usr/share/blender/3*/python/lib/* "${pkgdir}"/usr/lib/
+  rm -r "${pkgdir}"/usr/share/blender/3*/python
 }
 
