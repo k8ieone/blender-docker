@@ -45,7 +45,8 @@ prepare() {
   git -c protocol.file.allow=always submodule update
   git submodule foreach git checkout v${pkgver}
 
-  patch -p1 < "$srcdir"/blender-openexr3.patch
+  patch -p1 -i "$srcdir"/force-draco1.patch
+  patch -p1 -d release/scripts/addons -i "$srcdir"/force-draco2.patch
 }
 
 get_pyver() {
