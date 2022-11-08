@@ -9,6 +9,7 @@ Supported architectures are `linux/arm/v7`, `linux/aarch64` and `linux/amd64`.
    - [Optix](https://developer.nvidia.com/rtx/ray-tracing/optix) and [CUDA](https://developer.nvidia.com/cuda-toolkit)
    - [OpenImageDenoise](https://www.openimagedenoise.org/)
    - [Embree](https://www.embree.org/)
+   - 3.3.1 doesn't build for ARMv7 yet
 
 ## Versions
 | Blender version | Tag                              | GHCR Link                                                                                    | Notes           |
