@@ -1,5 +1,6 @@
 # Blender
 The image is based on Arch Linux, using [lopsided](https://github.com/lopsided98/archlinux-docker)'s images. Blender is simply installed as a package.
+The PKGBUILD was adopted from the [x86 package](https://github.com/archlinux/svntogit-community/tree/packages/blender/trunk).
 
 Supported architectures are `linux/arm/v7`, `linux/aarch64` and `linux/amd64`.
 
