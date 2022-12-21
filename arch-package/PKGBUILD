@@ -5,7 +5,7 @@
 #  - Disabled CUDA and Optix Cycles device support
 
 pkgname=blender
-pkgver=3.3.1
+pkgver=3.4.1
 pkgrel=1
 epoch=20
 pkgdesc="A fully integrated 3D graphics creation suite"
@@ -16,7 +16,7 @@ depends=('libpng' 'libtiff' 'openexr' 'python' 'desktop-file-utils' 'python-requ
          'shared-mime-info' 'hicolor-icon-theme' 'xdg-utils' 'openjpeg2' 'glew' 'python-numpy'
          'freetype2' 'openal' 'ffmpeg' 'fftw' 'boost-libs' 'opencollada' 'openxr'
          'openimageio' 'libsndfile' 'jack' 'opencolorio' 'openshadinglanguage' 'alembic'
-         'jemalloc' 'libspnav' 'ptex' 'opensubdiv' 'openvdb' 'log4cplus' 'sdl2' 'draco')
+         'jemalloc' 'libspnav' 'ptex' 'opensubdiv' 'openvdb' 'log4cplus' 'sdl2' 'draco' 'libepoxy')
 makedepends=('cmake' 'boost' 'mesa' 'git' 'llvm' 'ninja' 'patch')
 options=(!strip)
 source=("git+https://git.blender.org/blender.git#tag=v$pkgver"
