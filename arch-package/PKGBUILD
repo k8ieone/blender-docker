@@ -17,6 +17,7 @@ depends=('libpng' 'libtiff' 'openexr' 'python' 'desktop-file-utils' 'python-requ
          'freetype2' 'openal' 'ffmpeg' 'fftw' 'boost-libs' 'opencollada' 'openxr'
          'openimageio' 'libsndfile' 'jack' 'opencolorio' 'openshadinglanguage' 'alembic'
          'jemalloc' 'libspnav' 'ptex' 'opensubdiv' 'openvdb' 'log4cplus' 'sdl2' 'draco' 'libepoxy' 'embree')
+depends_x86_64=('openimagedenoise')
 makedepends=('cmake' 'boost' 'mesa' 'git' 'llvm' 'ninja' 'patch')
 options=(!strip)
 source=("git+https://git.blender.org/blender.git#tag=v$pkgver"
@@ -87,7 +88,7 @@ build() {
     -DWITH_ALEMBIC=ON \
     -DWITH_CYCLES_DEVICE_CUDA=OFF \
     -DWITH_CYCLES_DEVICE_OPTIX=OFF \
-
+  exit 1
   cmake --build build
 }
 
