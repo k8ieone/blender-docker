@@ -20,15 +20,18 @@ depends=('libpng' 'libtiff' 'openexr' 'python' 'desktop-file-utils' 'python-requ
 depends_x86_64=('openimagedenoise')
 makedepends=('cmake' 'boost' 'mesa' 'git' 'llvm' 'ninja' 'patch')
 options=(!strip)
-source=("git+https://git.blender.org/blender.git#tag=v$pkgver"
-        "git+https://git.blender.org/blender-addons.git"
-        "git+https://git.blender.org/blender-addons-contrib.git"
-        "git+https://git.blender.org/blender-translations.git"
-        "git+https://git.blender.org/blender-dev-tools.git"
+source=("git+https://projects.blender.org/blender/blender.git#tag=v$pkgver"
+        "git+https://projects.blender.org/blender/blender-addons.git"
+        "git+https://projects.blender.org/blender/blender-addons-contrib.git"
+        "git+https://projects.blender.org/blender/blender-translations.git"
+        "git+https://projects.blender.org/blender/blender-dev-tools.git"
         "git+https://github.com/DLTcollab/sse2neon.git#tag=v1.6.0"
         blender-numpy.patch
         force-draco1.patch
-        force-draco2.patch)
+        force-draco2.patch
+        blender-oneapi-escape.patch
+        blender-sycl-path.patch
+        blender-ffmpeg6.patch)
 sha512sums=('SKIP'
             'SKIP'
             'SKIP'
@@ -37,7 +40,10 @@ sha512sums=('SKIP'
             'SKIP'
             'a39d9a13515b71d3b686d8f011b3eb9ee45de04f716627d711c5119317cb130c587da1b806f276f97064f814cfce3790b201731f047e5ec01e7d6f65acd04b3b'
             'e239da4f3906f1b54265435181cf770bae3d269c8d915df9a73861e6ee71ec70bf2339426e7c81a91e5a567273b3b3742d7a99feefd3398d821b26e1ff3a56d0'
-            '527ab66e5eace777de0043c1ca5787a488f6471450ce67fd6d08137ad0ef56177bc0c17696f30a5fca23fa55d8ca9c3f30cb7b17550dba2dbd8e89ca0b361990')
+            'c162646eba42ea7112cfb615466c2cbaddac8d254d4a9e91cf887c5bffef1325a983701163223a1fdee091310ac5574a400347aab7f52321825b5fa3d5a9036f'
+            '1898af42ac10e9fc61c6fb979c1a3c6c91981c0c9790bf954e9425b5e7db897399d0ba6757f006f4ee1d6125ae0619b2e2a7ea5cf77cc36b91f3192873b66d9f'
+            'bc9a80941a18aaddc3e8f2d9963e4f6b7eb1cf9f098418adb236771c3bedcab7b7a06121178f7498caba1af67116cd0ea549382e14a707163cdd5d8fbf3ee824'
+            '34a2e2a344e851858fc8408ca9fd31d1d4a40083b2a1b2c01cabf48c2728c0b97226cf22c4224f93eda383b4690ff57e98291ad4fa81b960f0531067b40f78f7')
 
 prepare() {
   cd "$pkgname"
@@ -50,13 +56,25 @@ prepare() {
   git -c protocol.file.allow=always submodule update
   git submodule foreach git checkout v${pkgver}
 
+  # fix build with boost 1.81.0
   git format-patch -1 --stdout 79837c5ed4b5 | patch -Np1
 
+  # fix draco
   patch -p1 -i "$srcdir"/force-draco1.patch
   patch -p1 -d release/scripts/addons -i "$srcdir"/force-draco2.patch
 
   # fix for FS#77376
   patch -p1 -d release/scripts/addons -i "$srcdir"/blender-numpy.patch
+
+  # fix SYCL include dir
+  patch -p1 -i "$srcdir"/blender-sycl-path.patch
+
+  # fix oneapi escapes
+  patch -p1 -i "$srcdir"/blender-oneapi-escape.patch
+
+  # ffmpeg 6
+  patch -p1 -i "$srcdir"/blender-ffmpeg6.patch
+
 }
 
 get_pyver() {
@@ -82,13 +100,8 @@ build() {
     -DPYTHON_INCLUDE_DIRS=/usr/include/python$PYTHON_VER \
     -DCMAKE_CXX_FLAGS="-I /usr/include/python$PYTHON_VER" \
     -DSSE2NEON_INCLUDE_DIR="$srcdir/sse2neon" \
-    -DWITH_CYCLES=ON \
-    -DWITH_RAYOPTIMIZATION=ON \
-    -DWITH_CYCLES_EMBREE=ON \
-    -DWITH_ALEMBIC=ON \
     -DWITH_CYCLES_DEVICE_CUDA=OFF \
-    -DWITH_CYCLES_DEVICE_OPTIX=OFF \
-  exit 1
+    -DWITH_CYCLES_DEVICE_OPTIX=OFF
   cmake --build build
 }
 

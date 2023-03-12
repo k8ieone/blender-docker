@@ -1,11 +1,13 @@
 FROM ghcr.io/a13xie/arch-builder:latest AS builder
-ADD --chown=builder:builder arch-deps/ /home/builder/arch-deps
+ADD --chown=builder:builder arch-deps/ispc/ /home/builder/arch-deps/ispc
 WORKDIR /home/builder/arch-deps/ispc
 RUN sudo -u builder pikaur -Pi PKGBUILD --needed --noprogressbar --noconfirm
+ADD --chown=builder:builder arch-deps/embree/ /home/builder/arch-deps/embree
 WORKDIR /home/builder/arch-deps/embree
 RUN sudo -u builder pikaur -Pi PKGBUILD --needed --noprogressbar --noconfirm
-#WORKDIR /home/builder/arch-deps/openpgl
-#RUN sudo -u builder pikaur -Pi PKGBUILD --needed --noprogressbar --noconfirm
+ADD --chown=builder:builder arch-deps/openpgl/ /home/builder/arch-deps/openpgl
+WORKDIR /home/builder/arch-deps/openpgl
+RUN sudo -u builder pikaur -Pi PKGBUILD --needed --noprogressbar --noconfirm
 ADD --chown=builder:builder arch-package/ /home/builder/arch-package
 WORKDIR /home/builder/arch-package
 RUN build-local
