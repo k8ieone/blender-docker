@@ -23,13 +23,11 @@ options=('!strip')
 source=("git+https://projects.blender.org/blender/blender.git#tag=v$pkgver"
         "git+https://github.com/DLTcollab/sse2neon.git#tag=v1.6.0"
         force-draco1.patch
-        force-draco2.patch
-        blender-sycl-path.patch)
+        force-draco2.patch)
 sha512sums=('SKIP'
             'SKIP'
             'e239da4f3906f1b54265435181cf770bae3d269c8d915df9a73861e6ee71ec70bf2339426e7c81a91e5a567273b3b3742d7a99feefd3398d821b26e1ff3a56d0'
-            'c162646eba42ea7112cfb615466c2cbaddac8d254d4a9e91cf887c5bffef1325a983701163223a1fdee091310ac5574a400347aab7f52321825b5fa3d5a9036f'
-            'bc9a80941a18aaddc3e8f2d9963e4f6b7eb1cf9f098418adb236771c3bedcab7b7a06121178f7498caba1af67116cd0ea549382e14a707163cdd5d8fbf3ee824')
+            'c162646eba42ea7112cfb615466c2cbaddac8d254d4a9e91cf887c5bffef1325a983701163223a1fdee091310ac5574a400347aab7f52321825b5fa3d5a9036f')
 
 prepare() {
   cd "$pkgname"
