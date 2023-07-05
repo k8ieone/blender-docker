@@ -5,7 +5,7 @@
 #  - Disabled CUDA and Optix Cycles device support
 
 pkgname=blender
-pkgver=3.5.0
+pkgver=3.6.0
 pkgrel=1
 epoch=20
 pkgdesc="A fully integrated 3D graphics creation suite"
@@ -38,10 +38,6 @@ prepare() {
   # fix draco
   patch -p1 -i "$srcdir"/force-draco1.patch
   patch -p1 -d scripts/addons -i "$srcdir"/force-draco2.patch
-
-
-  # fix SYCL include dir
-  patch -p1 -i "$srcdir"/blender-sycl-path.patch
 
 }
 
@@ -91,4 +87,3 @@ package() {
   mv "${pkgdir}"/usr/share/blender/3*/python/lib/* "${pkgdir}"/usr/lib/
   rm -r "${pkgdir}"/usr/share/blender/3*/python
 }
-
