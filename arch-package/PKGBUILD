@@ -18,7 +18,7 @@ depends=('libpng' 'libtiff' 'openexr' 'python' 'desktop-file-utils' 'python-requ
          'openimageio' 'libsndfile' 'jack' 'opencolorio' 'openshadinglanguage' 'alembic'
          'jemalloc' 'libspnav' 'ptex' 'opensubdiv' 'openvdb' 'log4cplus' 'sdl2' 'draco' 'libepoxy' 'embree')
 depends_x86_64=('openimagedenoise')
-makedepends=('cmake' 'boost' 'mesa' 'git' 'llvm15' 'ninja' 'patch' 'svn')
+makedepends=('cmake' 'boost' 'mesa' 'git' 'llvm' 'ninja' 'patch' 'svn')
 options=('!strip')
 # git+https://projects.blender.org/blender/blender.git#commit=$_commit
 # _commit=ffe93138751e
