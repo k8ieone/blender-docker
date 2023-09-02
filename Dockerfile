@@ -17,6 +17,7 @@ LABEL org.opencontainers.image.source=https://github.com/a13xie/blender-docker
 LABEL org.opencontainers.image.description Blender 3.6.2
 COPY --from=builder /home/builder/built/ /built/
 RUN pacman -S --noconfirm --noprogressbar git mercurial python-zstandard xorg-xinit xorg-server xf86-video-dummy xterm psmisc
+COPY ./10-headless.conf /etc/X11/xorg.conf.d/10-headless.conf
 RUN pacman -U --noconfirm --noprogressbar --needed /built/*.pkg.tar.* && rm -r /built
 
 ENTRYPOINT ["/usr/bin/blender", "-b"]
