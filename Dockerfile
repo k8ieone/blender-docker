@@ -16,6 +16,7 @@ FROM ghcr.io/a13xie/arch-base:latest AS runner
 LABEL org.opencontainers.image.source=https://github.com/k8ieone/blender-docker
 LABEL org.opencontainers.image.description Blender 3.4.1
 COPY --from=builder /home/builder/built/ /built/
+RUN pacman -S --noconfirm --noprogressbar git mercurial
 RUN pacman -U --noconfirm --noprogressbar --needed /built/*.pkg.tar.* && rm -r /built
 
 ENTRYPOINT ["/usr/bin/blender", "-b"]
