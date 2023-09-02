@@ -13,10 +13,10 @@ WORKDIR /home/builder/arch-package
 RUN ulimit -n 1024000 && build-local
 
 FROM ghcr.io/a13xie/arch-base:latest AS runner
-LABEL org.opencontainers.image.source=https://github.com/k8ieone/blender-docker
-LABEL org.opencontainers.image.description Blender 3.4.1
+LABEL org.opencontainers.image.source=https://github.com/a13xie/blender-docker
+LABEL org.opencontainers.image.description Blender 3.6.2
 COPY --from=builder /home/builder/built/ /built/
-RUN pacman -S --noconfirm --noprogressbar git mercurial
+RUN pacman -S --noconfirm --noprogressbar git mercurial python-zstandard xorg-xinit xorg-server xf86-video-dummy xterm psmisc
 RUN pacman -U --noconfirm --noprogressbar --needed /built/*.pkg.tar.* && rm -r /built
 
 ENTRYPOINT ["/usr/bin/blender", "-b"]
