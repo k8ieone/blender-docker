@@ -20,9 +20,9 @@ depends=('libpng' 'libtiff' 'openexr' 'python' 'desktop-file-utils' 'python-requ
 depends_x86_64=('openimagedenoise')
 makedepends=('cmake' 'boost' 'mesa' 'git' 'llvm15' 'ninja' 'patch' 'svn')
 options=('!strip')
-# git+https://projects.blender.org/blender/blender.git#tag=v$pkgver
-_commit=ffe93138751e
-source=("git+https://projects.blender.org/blender/blender.git#commit=$_commit"
+# git+https://projects.blender.org/blender/blender.git#commit=$_commit
+# _commit=ffe93138751e
+source=("git+https://projects.blender.org/blender/blender.git#tag=v$pkgver"
         "git+https://github.com/DLTcollab/sse2neon.git#tag=v1.6.0"
         force-draco1.patch
         force-draco2.patch
@@ -70,7 +70,8 @@ build() {
     -DCMAKE_CXX_FLAGS="-I /usr/include/python$PYTHON_VER" \
     -DSSE2NEON_INCLUDE_DIR="$srcdir/sse2neon" \
     -DWITH_CYCLES_DEVICE_CUDA=OFF \
-    -DWITH_CYCLES_DEVICE_OPTIX=OFF
+    -DWITH_CYCLES_DEVICE_OPTIX=OFF \
+    -DWITH_GHOST_SDL=ON
   cmake --build build
 }
 
