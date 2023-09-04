@@ -1,0 +1,27 @@
+From dcb0c9b77da790a191857cc77c8128089335fdfa Mon Sep 17 00:00:00 2001
+From: ChengduLittleA <xp8110@outlook.com>
+Date: Mon, 4 Sep 2023 14:16:26 +0800
+Subject: [PATCH] Fix #111820: Missing type casting in XrGraphicsBinding.cc
+
+The line `oxr_binding.egl.getProcAddress = eglGetProcAddress` supposedly
+needs a type casting for it to compile successfully under llvm16.
+---
+ intern/ghost/intern/GHOST_XrGraphicsBinding.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/intern/ghost/intern/GHOST_XrGraphicsBinding.cc b/intern/ghost/intern/GHOST_XrGraphicsBinding.cc
+index 6f1279a9613..dad9fab9337 100644
+--- a/intern/ghost/intern/GHOST_XrGraphicsBinding.cc
++++ b/intern/ghost/intern/GHOST_XrGraphicsBinding.cc
+@@ -153,7 +153,7 @@ class GHOST_XrGraphicsBindingOpenGL : public GHOST_IXrGraphicsBinding {
+ #  if defined(WITH_GHOST_X11)
+         /* #GHOST_SystemX11. */
+         oxr_binding.egl.type = XR_TYPE_GRAPHICS_BINDING_EGL_MNDX;
+-        oxr_binding.egl.getProcAddress = eglGetProcAddress;
++        oxr_binding.egl.getProcAddress = static_cast<PFNEGLGETPROCADDRESSPROC>(eglGetProcAddress);
+         oxr_binding.egl.display = ctx_egl.getDisplay();
+         oxr_binding.egl.config = ctx_egl.getConfig();
+         oxr_binding.egl.context = ctx_egl.getContext();
+-- 
+2.30.2
+
