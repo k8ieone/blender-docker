@@ -73,7 +73,6 @@ build() {
     -DSSE2NEON_INCLUDE_DIR="$srcdir/sse2neon" \
     -DWITH_CYCLES_DEVICE_CUDA=OFF \
     -DWITH_CYCLES_DEVICE_OPTIX=OFF \
-    -DWITH_XR_OPENXR=ON \
     -DWITH_CYCLES_OSL=OFF
   cmake --build build
 }
