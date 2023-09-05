@@ -33,7 +33,7 @@ sha512sums=('SKIP'
             'e239da4f3906f1b54265435181cf770bae3d269c8d915df9a73861e6ee71ec70bf2339426e7c81a91e5a567273b3b3742d7a99feefd3398d821b26e1ff3a56d0'
             'c162646eba42ea7112cfb615466c2cbaddac8d254d4a9e91cf887c5bffef1325a983701163223a1fdee091310ac5574a400347aab7f52321825b5fa3d5a9036f'
             'b1eb2379b673514da2599c5fc3be7fc597d4d3d23550ff392b364ae53f67e332bbed7612a0d06cbf9cd255ad6833bdb29f7e3fe668471d57e91407092419f4dd'
-            '03382634c2acf713486d82c14e758365e3cfab6da48102006cc3afa6e56cbd79d32dce731fee0b5a7a02572823ca45faacbfdea3f1d2ef21b66ba982c2349cb2')
+            '82ec48517bfabfb4dd6436d23d7b2f1fdd4b6dbcd8a3f99eff590b59fbe855e062ee0b7446484571c41f1bf2233f81dfcd3413679c829074a1bdabc974e4a85e')
 
 prepare() {
   cd "$pkgname"
@@ -63,7 +63,6 @@ build() {
     -Cbuild_files/cmake/config/blender_release.cmake \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_BUILD_TYPE=Release \
-    -DLLVM_VERSION=15 \
     -DWITH_INSTALL_PORTABLE=OFF \
     -DWITH_PYTHON_INSTALL=OFF \
     -DPYTHON_VERSION=$PYTHON_VER \
@@ -73,7 +72,9 @@ build() {
     -DCMAKE_CXX_FLAGS="-I /usr/include/python$PYTHON_VER" \
     -DSSE2NEON_INCLUDE_DIR="$srcdir/sse2neon" \
     -DWITH_CYCLES_DEVICE_CUDA=OFF \
-    -DWITH_CYCLES_DEVICE_OPTIX=OFF
+    -DWITH_CYCLES_DEVICE_OPTIX=OFF \
+    -DWITH_XR_OPENXR=ON \
+    -DWITH_CYCLES_OSL=OFF
   cmake --build build
 }
 
