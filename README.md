@@ -17,3 +17,4 @@ Supported architectures are `linux/aarch64` and `linux/amd64`. `linux/arm/v7` wa
 | 3.4.1           | `ghcr.io/a13xie/blender:3.4.1`  | [Here](https://github.com/a13xie/blender-docker/pkgs/container/blender/76737222?tag=3.4.1)  | Working Embree and OpenPGL 🎉  |
 | 3.5.0           | `ghcr.io/a13xie/blender:3.5.0`  | [Here](https://github.com/a13xie/blender-docker/pkgs/container/blender/81879703?tag=3.5.0)  |                    |
 | 3.6.0           | `ghcr.io/a13xie/blender:3.6.0`  | [Here](https://github.com/a13xie/blender-docker/pkgs/container/blender/107209634?tag=3.6.0)  |                    |
+| 3.6.2           | `ghcr.io/a13xie/blender:3.6.2`  | [Here](https://github.com/a13xie/blender-docker/pkgs/container/blender/125331965?tag=3.6.2)  | Built without OpenXR and OSL |
