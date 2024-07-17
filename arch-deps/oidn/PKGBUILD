@@ -1,0 +1,33 @@
+# Maintainer: Filipe Laíns (FFY00) <lains@archlinux.org>
+# Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
+
+pkgname=openimagedenoise
+pkgver=2.3.0
+pkgrel=1
+pkgdesc='Intel(R) Open Image Denoise library'
+arch=('x86_64' 'aarch64')
+url='https://openimagedenoise.github.io'
+license=('Apache')
+depends=('intel-tbb')
+makedepends=('cmake' 'ninja' 'ispc' 'python')
+source=(
+  "git+https://github.com/RenderKit/oidn#tag=v$pkgver"
+)
+sha512sums=('eca18e9e22a40bc1381e75985e5f5e79f48cc6d168a2a703e54540967646487d347db290459e9a612d8ab4924e8d3c83d84664fd5318cca4f17745da1e47cf50')
+
+build() {
+  cd oidn
+
+  cmake \
+    -B build \
+    -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release
+  ninja -C build
+}
+
+package() {
+  cd oidn-$pkgver
+  DESTDIR="$pkgdir" ninja -C build install
+}
+
