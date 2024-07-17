@@ -1,7 +1,7 @@
 FROM ghcr.io/k8ieone/arch-builder:latest AS builder
 ADD --chown=builder:builder arch-deps/ispc/ /home/builder/arch-deps/ispc
 WORKDIR /home/builder/arch-deps/ispc
-RUN ulimit -n 1024000 && sudo -u builder pikaur -Pi PKGBUILD --needed --noprogressbar --noconfirm --nocheck
+RUN ulimit -n 1024000 && sudo -u builder pikaur -Pi PKGBUILD --needed --noprogressbar --noconfirm
 ADD --chown=builder:builder arch-deps/embree/ /home/builder/arch-deps/embree
 WORKDIR /home/builder/arch-deps/embree
 RUN ulimit -n 1024000 && sudo -u builder pikaur -Pi PKGBUILD --needed --noprogressbar --noconfirm
