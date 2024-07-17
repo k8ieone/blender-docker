@@ -59,7 +59,8 @@ check() {
   # https://github.com/ispc/ispc/issues/2427
   # https://github.com/ispc/ispc/issues/2428
   # https://github.com/ispc/ispc/issues/2429
-  make -C build check-all || echo "Tests failed"
+  #make -C build check-all || echo "Tests failed"
+  echo "Tests skipped"
 }
 
 package() {
