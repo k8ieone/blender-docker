@@ -67,6 +67,6 @@ package() {
   DESTDIR="$pkgdir" cmake --install build
   install -Dm644 $pkgname/LICENSE.txt -t "${pkgdir}"/usr/share/licenses/${pkgname}
   # Remove uneeded files: https://github.com/ispc/ispc/issues/2482
-  rm -rv "${pkgdir}"/build
+  #rm -rv "${pkgdir}"/build
 }
 
