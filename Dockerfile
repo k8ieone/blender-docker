@@ -11,7 +11,7 @@ FROM ispc_builder AS embree_oidn_builder_base
 RUN --mount=type=cache,target=/var/cache/pacman \
   pacman -U --noconfirm --noprogressbar --needed /home/builder/built/*.pkg.tar.*
 
-FROM embree_oidn_builder_base as embree_builder
+FROM embree_oidn_builder_base AS embree_builder
 ADD --chown=builder:builder arch-deps/embree/ /home/builder/arch-deps/embree
 WORKDIR /home/builder/arch-deps/embree
 RUN --mount=type=cache,target=/var/cache/pacman \
