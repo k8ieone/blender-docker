@@ -4,6 +4,7 @@
 pkgname=openimagedenoise
 pkgver=2.3.0
 pkgrel=1
+epoch=20
 pkgdesc='Intel(R) Open Image Denoise library'
 arch=('x86_64' 'aarch64')
 url='https://openimagedenoise.github.io'
