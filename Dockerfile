@@ -22,13 +22,13 @@ RUN --mount=type=cache,target=/var/cache/pacman,sharing=locked \
 FROM embree_oidn_builder_base AS oidn_builder
 ADD --chown=builder:builder arch-deps/oidn/ /home/builder/arch-deps/oidn
 WORKDIR /home/builder/arch-deps/oidn
-#RUN --mount=type=cache,target=/var/cache/pacman,sharing=locked --mount=type=cache,target=/home/builder/.cache/ccache,uid=1000,gid=1000 ulimit -n 1024000 && build-local
+RUN --mount=type=cache,target=/var/cache/pacman,sharing=locked --mount=type=cache,target=/home/builder/.cache/ccache,uid=1000,gid=1000 ulimit -n 1024000 && build-local
 
 FROM ghcr.io/k8ieone/arch-builder:latest AS blender_builder
 RUN rm /usr/share/libalpm/hooks/package-cleanup.hook
 ADD --chown=builder:builder arch-package/ /home/builder/arch-package
 COPY --from=embree_builder /home/builder/built/* /built/
-#COPY --from=oidn_builder /home/builder/built/* /built/
+COPY --from=oidn_builder /home/builder/built/* /built/
 RUN --mount=type=cache,target=/var/cache/pacman,sharing=locked \
   pacman -U --noconfirm --noprogressbar --needed /built/*.pkg.tar.* && rm -r /built
 WORKDIR /home/builder/arch-package
@@ -43,7 +43,7 @@ LABEL org.opencontainers.image.source=https://github.com/k8ie/blender-docker
 LABEL org.opencontainers.image.description Blender 4.2.0
 COPY --from=ispc_builder /home/builder/built/* /built/
 COPY --from=embree_builder /home/builder/built/* /built/
-#COPY --from=oidn_builder /home/builder/built/* /built/
+COPY --from=oidn_builder /home/builder/built/* /built/
 COPY --from=blender_builder /home/builder/built/* /built/
 RUN --mount=type=cache,target=/var/cache/pacman,sharing=locked \
   pacman -U --noconfirm --noprogressbar --needed /built/*.pkg.tar.* && rm -r /built
