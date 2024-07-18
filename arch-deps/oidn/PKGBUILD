@@ -11,12 +11,12 @@ license=('Apache')
 depends=('intel-tbb')
 makedepends=('cmake' 'ninja' 'ispc' 'python')
 source=(
-  "git+https://github.com/RenderKit/oidn#tag=v$pkgver"
+  "https://github.com/OpenImageDenoise/oidn/releases/download/v${pkgver}/oidn-${pkgver}.src.tar.gz"
 )
-sha512sums=('e0b6e0060bb448c65e11c07c879458cc1700335d1e30858d59cf4616dcf247f3231d90c92b689e65da0b7e4733a545cffc431bf4cc3c54f0dacfdf3c387eff1f')
+sha512sums=('4f68ce3b0da37e1861090d60d7cd823046f325c45a8e2c3f4098eb3b4f7ec676d2acbb9c138ff60a9f83188dd0dcbaba42106aad96beafc5e65045c77c00f2f8')
 
 build() {
-  cd oidn
+  cd oidn-$pkgver
 
   cmake \
     -B build \
