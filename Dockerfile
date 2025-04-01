@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/var/cache/pacman,sharing=locked \
 FROM ghcr.io/k8ieone/arch-base:latest AS runner
 RUN rm /usr/share/libalpm/hooks/package-cleanup.hook
 LABEL org.opencontainers.image.source=https://github.com/k8ieone/blender-docker
-LABEL org.opencontainers.image.description Blender 4.4.0
+LABEL org.opencontainers.image.description="Blender 4.4.0"
 COPY --from=ispc_builder /home/builder/built/* /built/
 COPY --from=embree_builder /home/builder/built/* /built/
 COPY --from=oidn_builder /home/builder/built/* /built/
