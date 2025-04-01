@@ -1,8 +1,7 @@
-# Maintainer: Lukas Jirkovsky <l.jirkovsky@gmail.com>
-# Maintainer: Bruno Pagani <archange@archlinux.org>
+# Based on https://gitlab.archlinux.org/archlinux/packaging/packages/ispc/-/blob/main/PKGBUILD
 
 pkgname=ispc
-pkgver=1.24.0
+pkgver=1.25.3
 pkgrel=1
 epoch=20
 pkgdesc="Compiler for high-performance SIMD programming on the CPU"
@@ -25,7 +24,7 @@ source=(
   $pkgname-benchmark::git+https://github.com/google/benchmark.git
   $pkgname-googletest::git+https://github.com/google/googletest.git
 )
-sha256sums=('f9a5b259f3664eecbbcbaab8df1964d70ccbb7bcbbc1574de3aae9dfdb9ee823'
+sha256sums=('7f663afbba105013c7c859d46b1111ae25a2c7d349202994b3105ee59d7dc9a7'
             'SKIP'
             'SKIP')
 
@@ -36,6 +35,12 @@ prepare() {
   git config submodule.benchmarks/vendor/google/benchmark.url "$srcdir/$pkgname-benchmark"
   git config submodule.ispcrt/tests/vendor/google/googletest.url "$srcdir/$pkgname-googletest"
   git -c protocol.file.allow=always submodule update
+
+  git cherry-pick -n \
+    62426bf5a50a49b30a4eb0206e8a8d78ff0e7006 \
+    5422fc1f6e7caa74906e612f5803287be5bb915f \
+    17ee83fba824eaee79065256c49fbfc21f730d01 \
+    cb097ab5821c4219349b37a5c217e3df3d3987f1
 }
 
 build() {
@@ -67,7 +72,4 @@ check() {
 package() {
   DESTDIR="$pkgdir" cmake --install build
   install -Dm644 $pkgname/LICENSE.txt -t "${pkgdir}"/usr/share/licenses/${pkgname}
-  # Remove uneeded files: https://github.com/ispc/ispc/issues/2482
-  #rm -rv "${pkgdir}"/build
 }
-
