@@ -1,11 +1,10 @@
-# Based on https://github.com/archlinux/svntogit-community/blob/packages/blender/trunk/PKGBUILD
+# Based on https://gitlab.archlinux.org/archlinux/packaging/packages/blender/-/blob/main/PKGBUILD
 #  - remove makedepend, optdepend on cuda
-#  - remove depend on openimagedenoise
 #  - Removed the unnecessary Optix source
 #  - Disabled CUDA and Optix Cycles device support
 
 pkgname=blender
-pkgver=4.2.0
+pkgver=4.4.0
 pkgrel=1
 epoch=20
 pkgdesc="A fully integrated 3D graphics creation suite"
@@ -34,6 +33,7 @@ depends=(
   'freetype2'
   'gcc-libs'
   'glew'
+  'glibc'
   'gmp'
   'hicolor-icon-theme'
   'imath'
@@ -61,7 +61,6 @@ depends=(
   'materialx'
   'onetbb'
   'openal'
-  'opencollada'
   'opencolorio'
   'openexr'
   'openimagedenoise'
@@ -88,7 +87,12 @@ depends=(
   'zstd'
 )
 #depends_x86_64=(
-#'cuda'
+#  'cuda'
+#  'hip-runtime-amd'
+#  'hiprt'
+#  'intel-oneapi-compiler-shared-runtime'
+#  'intel-oneapi-dpcpp-cpp'
+#  'intel-compute-runtime'
 #)
 makedepends=(
   'boost'
@@ -102,7 +106,6 @@ makedepends=(
   'mesa'
   'ninja'
   'subversion'
-  'patch'
   'wayland-protocols'
 )
 # We're using !lto here as otherwise we get stuff such as FS#77557
@@ -111,19 +114,11 @@ options=('!lto')
 # _commit=ffe93138751e
 source=("git+https://projects.blender.org/blender/blender.git#tag=v$pkgver"
         "git+https://projects.blender.org/blender/blender-assets#tag=v$pkgver"
-        "git+https://github.com/DLTcollab/sse2neon.git#tag=v1.7.0"
         #https://developer.download.nvidia.com/redist/optix/v8.0/OptiX-8.0-Include.zip
-        force-draco1.patch
-        blender-4.11-mantaflow-python-3.12.patch
-        ffmpeg-7-1.patch
-        ffmpeg-7-2.patch)
-sha512sums=('21346666b2cc462f2d11ddfdd69fde176cd4025fa9dc39ea4c414601801030081e04e724380607784ba12fa60708cc01c521012a454740144e6935011477dd00'
-            'SKIP'
-            '180e9a00db3cb0b9af02b33a8bbca5e6939f7e5ce1a9d66cb9696400a944013418a8b8686cb4fcd31ade455165d11ce6f7b3baa7925b550fed30642caa409597'
-            'e239da4f3906f1b54265435181cf770bae3d269c8d915df9a73861e6ee71ec70bf2339426e7c81a91e5a567273b3b3742d7a99feefd3398d821b26e1ff3a56d0'
-            '59044954880ce94d7a1da78ccd03e61a9d23382281b2221ca5c9c7eec9caeecf810d10ee07940d5843b7540fa81c00df5a26e8076605410116815e73c60ab9b9'
-            '3162682e4611bab7e40c8b27650787e0acab0e02b969bd052917f24ec92435e59aef4835d418013498ffe318281498acd5f308c1d12ae0417f205bb80af17c0b'
-            '86dd84d86fc0cf7b66d56418b23f6af4589943c20259c298fabcd8465837d67585029a2dba93b6c4e7b2836917ca7c722ba408bb2595a6f1b13f367645cce3bf')
+        hiprt-lib-path.patch)
+sha512sums=('22c1664a45b1c0f5f5599a065883c19563197c5db7df8ce758465b7bcfb41ab5865494803e27c7ba265c54f5e32a45d2e83dbe00bd927a98a00ddd38c11d06fc'
+            '43cc5f388581698a68ad611222fcf48445441fc58685259beacb4e6de62c86db6adb7d255f1781bbb1cacf3eade4a6745ddcc519dfed3f776bddcbe1e3ee82d9'
+            '52dd6c4496af38505761e559adee556176aa2ad023f073618af77f6c9bc5e3a8faa59c8f259dc92302f7e650740afd2060951129408f1939d29c0901e8ccccae')
 
 prepare() {
   cd "$pkgname"
@@ -138,20 +133,7 @@ prepare() {
   git -C release/datafiles/assets lfs fetch network-origin
   git -C release/datafiles/assets lfs checkout
 
-
-  # fix draco
-  patch -p1 -i "$srcdir"/force-draco1.patch
-
-  # fix fluid sim domain with python 3.12
-  # https://gitlab.archlinux.org/archlinux/packaging/packages/blender/-/issues/18
-  patch -p1 -i "$srcdir"/blender-4.11-mantaflow-python-3.12.patch
-
-  # fix build with ffmpeg 7
-  patch -p1 -i ../ffmpeg-7-1.patch
-  patch -p1 -i ../ffmpeg-7-2.patch
-
-  # fix build with usd 24.05
-  git cherry-pick -n 2db96ee8cae8b4e5d6278ba7a12308ee959164bc
+  patch -p1 -i "$srcdir"/hiprt-lib-path.patch
 }
 
 _get_pyver() {
@@ -161,6 +143,10 @@ _get_pyver() {
 build() {
   # This should fix #13.
   export CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS/}
+  CXXFLAGS+=' --param=max-vartrack-size=640000000'
+
+  # Fix numpy discovery
+  sed -i "s|core/include|_core/include|g" blender/CMakeLists.txt
 
   local cmake_options=(
     -B build
@@ -171,8 +157,7 @@ build() {
     -D WITH_LINKER_MOLD=ON
     #-D CUDA_HOST_COMPILER="$NVCC_CCBIN"
     #-D HIP_ROOT_DIR=/opt/rocm
-    # Skip targets gfx115{0,1} as they not supported by ROCm 6.0.2
-    #-D CYCLES_HIP_BINARIES_ARCH="gfx900;gfx90c;gfx902;gfx1010;gfx1011;gfx1012;gfx1030;gfx1031;gfx1032;gfx1034;gfx1035;gfx1036;gfx1100;gfx1101;gfx1102;gfx1103"
+    #-D HIPRT_INCLUDE_DIR=/opt/rocm/include
     -D OCLOC_INSTALL_DIR=/usr
     #-D OPTIX_ROOT_DIR="$srcdir"
     -D PYTHON_VERSION="$(_get_pyver)"
@@ -188,7 +173,6 @@ build() {
     -D WITH_CYCLES_ONEAPI_BINARIES=OFF
     -D WITH_INSTALL_PORTABLE=OFF
     -D WITH_PYTHON_INSTALL=OFF
-    -D SSE2NEON_INCLUDE_DIR="$srcdir/sse2neon"
     -G Ninja
     -S "$pkgname"
     -W no-dev
@@ -207,14 +191,6 @@ package() {
   python -O -m compileall "${pkgdir}/usr/share/blender"
 
   install -Dm644 release/freedesktop/org.blender.Blender.metainfo.xml "${pkgdir}/usr/share/metainfo/org.blender.Blender.metainfo.xml"
-
-  # Manually install draco bindings (See FS#73415)
-  mkdir -p "${pkgdir}/usr/lib/python$(_get_pyver)"/
-  mv "${pkgdir}"/usr/share/blender/4*/python/lib/* "${pkgdir}"/usr/lib/
-  rm -r "${pkgdir}"/usr/share/blender/4*/python
-
-  # Move OneAPI AOT lib to proper place
-  mv "${pkgdir}"/usr/share/blender/lib/libcycles_kernel_oneapi_aot.so "${pkgdir}"/usr/lib/
 
   install -vDm 644 doc/license/{BSD-{2,3}-Clause,MIT,Zlib}-license.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
 }
